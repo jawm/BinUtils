@@ -5,11 +5,53 @@ package binutils
 type Stream struct {
 	Offset int
 	Buffer []byte
+	err    *streamErr
+}
+
+type StreamErr interface {
+	// Offset gives the offset at which the error happened
+	Offset() int
+	// Buffer gives the buffer which caused the error
+	Buffer() []byte
+}
+
+type streamErr struct {
+	err    error
+	offset int
+	buf    *[]byte
+}
+
+func (se streamErr) Error() string {
+	return se.err.Error()
+}
+
+func (se streamErr) Offset() int {
+	return se.offset
+}
+
+func (se streamErr) Buffer() []byte {
+	return *se.buf
 }
 
 // NewStream returns a new stream.
 func NewStream() *Stream {
-	return &Stream{0, []byte{}}
+	return &Stream{0, []byte{}, &streamErr{}}
+}
+
+// NewGetStream gets a stream for reading
+func NewGetStream(buf []byte, offset int) *Stream {
+	return &Stream{offset, buf, &streamErr{buf: &buf}}
+}
+
+// Error returns any error that has been encountered on this stream
+func (stream *Stream) Error() error {
+	return stream.err
+}
+
+// SetError allows to set the error message on the stream
+func (stream *Stream) SetError(err error) {
+	stream.err.err = err
+	stream.err.offset = stream.Offset
 }
 
 // GetOffset returns the current stream offset.
@@ -40,10 +82,17 @@ func (stream *Stream) Feof() bool {
 // Get reads the given amount of bytes from the buffer.
 // If length is negative, reads the leftover bytes.
 func (stream *Stream) Get(length int) []byte {
+	if stream.err != nil {
+		return nil
+	}
 	if length < 0 {
 		length = len(stream.Buffer) - stream.Offset - 1
 	}
-	return Read(&stream.Buffer, &stream.Offset, length)
+	b, err := Read(&stream.Buffer, &stream.Offset, length)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutBool(v bool) {
@@ -51,7 +100,11 @@ func (stream *Stream) PutBool(v bool) {
 }
 
 func (stream *Stream) GetBool() bool {
-	return ReadBool(&stream.Buffer, &stream.Offset)
+	b, err := ReadBool(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutByte(v byte) {
@@ -59,7 +112,11 @@ func (stream *Stream) PutByte(v byte) {
 }
 
 func (stream *Stream) GetByte() byte {
-	return ReadByte(&stream.Buffer, &stream.Offset)
+	b, err := ReadByte(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutUnsignedByte(v byte) {
@@ -67,7 +124,11 @@ func (stream *Stream) PutUnsignedByte(v byte) {
 }
 
 func (stream *Stream) GetUnsignedByte() byte {
-	return ReadUnsignedByte(&stream.Buffer, &stream.Offset)
+	b, err := ReadUnsignedByte(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutShort(v int16) {
@@ -75,7 +136,11 @@ func (stream *Stream) PutShort(v int16) {
 }
 
 func (stream *Stream) GetShort() int16 {
-	return ReadShort(&stream.Buffer, &stream.Offset)
+	b, err := ReadShort(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutUnsignedShort(v uint16) {
@@ -83,7 +148,11 @@ func (stream *Stream) PutUnsignedShort(v uint16) {
 }
 
 func (stream *Stream) GetUnsignedShort() uint16 {
-	return ReadUnsignedShort(&stream.Buffer, &stream.Offset)
+	b, err := ReadUnsignedShort(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutInt(v int32) {
@@ -91,7 +160,11 @@ func (stream *Stream) PutInt(v int32) {
 }
 
 func (stream *Stream) GetInt() int32 {
-	return ReadInt(&stream.Buffer, &stream.Offset)
+	b, err := ReadInt(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutUnsignedInt(v uint32) {
@@ -99,7 +172,11 @@ func (stream *Stream) PutUnsignedInt(v uint32) {
 }
 
 func (stream *Stream) GetUnsignedInt() uint32 {
-	return ReadUnsignedInt(&stream.Buffer, &stream.Offset)
+	b, err := ReadUnsignedInt(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutLong(v int64) {
@@ -107,7 +184,11 @@ func (stream *Stream) PutLong(v int64) {
 }
 
 func (stream *Stream) GetLong() int64 {
-	return ReadLong(&stream.Buffer, &stream.Offset)
+	b, err := ReadLong(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutUnsignedLong(v uint64) {
@@ -115,7 +196,11 @@ func (stream *Stream) PutUnsignedLong(v uint64) {
 }
 
 func (stream *Stream) GetUnsignedLong() uint64 {
-	return ReadUnsignedLong(&stream.Buffer, &stream.Offset)
+	b, err := ReadUnsignedLong(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutFloat(v float32) {
@@ -123,7 +208,11 @@ func (stream *Stream) PutFloat(v float32) {
 }
 
 func (stream *Stream) GetFloat() float32 {
-	return ReadFloat(&stream.Buffer, &stream.Offset)
+	b, err := ReadFloat(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutDouble(v float64) {
@@ -131,7 +220,11 @@ func (stream *Stream) PutDouble(v float64) {
 }
 
 func (stream *Stream) GetDouble() float64 {
-	return ReadDouble(&stream.Buffer, &stream.Offset)
+	b, err := ReadDouble(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutVarInt(v int32) {
@@ -139,7 +232,14 @@ func (stream *Stream) PutVarInt(v int32) {
 }
 
 func (stream *Stream) GetVarInt() int32 {
-	return ReadVarInt(&stream.Buffer, &stream.Offset)
+	if stream.err != nil {
+		return 0
+	}
+	i, err := ReadVarInt(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return i
 }
 
 func (stream *Stream) PutVarLong(v int64) {
@@ -147,7 +247,14 @@ func (stream *Stream) PutVarLong(v int64) {
 }
 
 func (stream *Stream) GetVarLong() int64 {
-	return ReadVarLong(&stream.Buffer, &stream.Offset)
+	if stream.err != nil {
+		return 0
+	}
+	i, err := ReadVarLong(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return i
 }
 
 func (stream *Stream) PutUnsignedVarInt(v uint32) {
@@ -155,7 +262,14 @@ func (stream *Stream) PutUnsignedVarInt(v uint32) {
 }
 
 func (stream *Stream) GetUnsignedVarInt() uint32 {
-	return ReadUnsignedVarInt(&stream.Buffer, &stream.Offset)
+	if stream.err != nil {
+		return 0
+	}
+	i, err := ReadUnsignedVarInt(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return i
 }
 
 func (stream *Stream) PutUnsignedVarLong(v uint64) {
@@ -163,7 +277,14 @@ func (stream *Stream) PutUnsignedVarLong(v uint64) {
 }
 
 func (stream *Stream) GetUnsignedVarLong() uint64 {
-	return ReadUnsignedVarLong(&stream.Buffer, &stream.Offset)
+	if stream.err != nil {
+		return 0
+	}
+	i, err := ReadUnsignedVarLong(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return i
 }
 
 func (stream *Stream) PutString(v string) {
@@ -172,7 +293,14 @@ func (stream *Stream) PutString(v string) {
 }
 
 func (stream *Stream) GetString() string {
-	return string(Read(&stream.Buffer, &stream.Offset, int(stream.GetUnsignedVarInt())))
+	if stream.err != nil {
+		return ""
+	}
+	i, err := ReadString(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return i
 }
 
 func (stream *Stream) PutLittleShort(v int16) {
@@ -180,7 +308,11 @@ func (stream *Stream) PutLittleShort(v int16) {
 }
 
 func (stream *Stream) GetLittleShort() int16 {
-	return ReadLittleShort(&stream.Buffer, &stream.Offset)
+	b, err := ReadLittleShort(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutLittleUnsignedShort(v uint16) {
@@ -188,7 +320,11 @@ func (stream *Stream) PutLittleUnsignedShort(v uint16) {
 }
 
 func (stream *Stream) GetLittleUnsignedShort() uint16 {
-	return ReadLittleUnsignedShort(&stream.Buffer, &stream.Offset)
+	b, err := ReadLittleUnsignedShort(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutLittleInt(v int32) {
@@ -196,7 +332,11 @@ func (stream *Stream) PutLittleInt(v int32) {
 }
 
 func (stream *Stream) GetLittleInt() int32 {
-	return ReadLittleInt(&stream.Buffer, &stream.Offset)
+	b, err := ReadLittleInt(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutLittleUnsignedInt(v uint32) {
@@ -204,7 +344,11 @@ func (stream *Stream) PutLittleUnsignedInt(v uint32) {
 }
 
 func (stream *Stream) GetLittleUnsignedInt() uint32 {
-	return ReadLittleUnsignedInt(&stream.Buffer, &stream.Offset)
+	b, err := ReadLittleUnsignedInt(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutLittleLong(v int64) {
@@ -212,7 +356,11 @@ func (stream *Stream) PutLittleLong(v int64) {
 }
 
 func (stream *Stream) GetLittleLong() int64 {
-	return ReadLittleLong(&stream.Buffer, &stream.Offset)
+	b, err := ReadLittleLong(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutLittleUnsignedLong(v uint64) {
@@ -220,7 +368,11 @@ func (stream *Stream) PutLittleUnsignedLong(v uint64) {
 }
 
 func (stream *Stream) GetLittleUnsignedLong() uint64 {
-	return ReadLittleUnsignedLong(&stream.Buffer, &stream.Offset)
+	b, err := ReadLittleUnsignedLong(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutLittleFloat(v float32) {
@@ -228,7 +380,11 @@ func (stream *Stream) PutLittleFloat(v float32) {
 }
 
 func (stream *Stream) GetLittleFloat() float32 {
-	return ReadLittleFloat(&stream.Buffer, &stream.Offset)
+	b, err := ReadLittleFloat(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutLittleDouble(v float64) {
@@ -236,7 +392,11 @@ func (stream *Stream) PutLittleDouble(v float64) {
 }
 
 func (stream *Stream) GetLittleDouble() float64 {
-	return ReadLittleDouble(&stream.Buffer, &stream.Offset)
+	b, err := ReadLittleDouble(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutTriad(v uint32) {
@@ -244,7 +404,11 @@ func (stream *Stream) PutTriad(v uint32) {
 }
 
 func (stream *Stream) GetTriad() uint32 {
-	return ReadBigTriad(&stream.Buffer, &stream.Offset)
+	b, err := ReadBigTriad(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutLittleTriad(v uint32) {
@@ -252,7 +416,11 @@ func (stream *Stream) PutLittleTriad(v uint32) {
 }
 
 func (stream *Stream) GetLittleTriad() uint32 {
-	return ReadLittleTriad(&stream.Buffer, &stream.Offset)
+	b, err := ReadLittleTriad(&stream.Buffer, &stream.Offset)
+	if err != nil {
+		stream.SetError(err)
+	}
+	return b
 }
 
 func (stream *Stream) PutBytes(bytes []byte) {

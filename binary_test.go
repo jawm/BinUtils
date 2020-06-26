@@ -49,7 +49,7 @@ func TestEncodeVarInt(t *testing.T) {
 func TestDecodeVarInt(t *testing.T) {
 	for value, encoded := range knownEncodingsInt {
 		off := 0
-		read := ReadVarInt(&encoded, &off)
+		read, _ := ReadVarInt(&encoded, &off)
 		assert.Equal(t, value, read)
 	}
 }
@@ -91,7 +91,7 @@ func TestEncodeVarLong(t *testing.T) {
 func TestDecodeVarLong(t *testing.T) {
 	for value, encoded := range knownEncodingsLong {
 		off := 0
-		read := ReadVarLong(&encoded, &off)
+		read, _ := ReadVarLong(&encoded, &off)
 		assert.Equal(t, value, read)
 	}
 }
